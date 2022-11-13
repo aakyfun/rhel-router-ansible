@@ -119,10 +119,10 @@
         path: /etc/hosts
         line: "10.0.0.1\t{{ ansible_hostname }}"
 
-    - name: Insert line in sysctl.d to enable ipv4 forwarding
-      lineinfile:
-        path: /etc/sysctl.d/ip4fw.conf
-        line: "net.ipv4.ip_forward=1"
+    - name: Add file to sysctl.d to enable ipv4 forwarding
+      copy:
+        content: "net.ipv4.ip_forward=1"
+        dest: /etc/sysctl.d/ip4fw.conf
         
     - name: Load new sysctl settings
       shell: "sysctl -p /etc/sysctl.d/ip4fw.conf"
