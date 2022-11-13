@@ -14,3 +14,5 @@ method=auto
 [ipv6]
 addr-gen-mode=stable-privacy
 method=auto
+
+[proxy]
