@@ -1,0 +1,17 @@
+[connection]
+id=Internal
+uuid=cb952195-0627-4c0a-95b3-2071b5b1eb9c
+type=ethernet
+interface-name={{ internal_net_interface }}
+
+[ethernet]
+mac-address={{ internal_net_mac }}
+
+[ipv4]
+address1={{ router_static_ip }}/{{ cidr }}
+method=manual
+never-default=true
+
+[ipv6]
+addr-gen-mode=eui64
+method=ignore

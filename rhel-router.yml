@@ -1,0 +1,131 @@
+---
+# Welcome to the land of assumptions.
+
+- name: rhel-router
+  hosts: all
+  become: yes
+  tasks:
+    - name: Set some basic facts for config files
+      set_fact:
+        domain_name: "labnet"
+        dns_server_ip: "8.8.8.8"
+        cidr: "24"
+        router_static_ip: "10.0.0.1"
+        dhcp_ip_range_start: "10.0.0.2"
+        dhcp_ip_range_end: "10.0.0.16"
+        dhcp_lease_time: "12h"
+        netconfig: "ready"
+
+    - name: Check to make sure there are only three network interfaces (including lo) or fail
+      fail:
+        msg: "There are {{ ansible_interfaces | length }} interfaces. I support only three."
+      when: ansible_interfaces | length != 4
+
+    - name: Gather facts about Internal (unused) network interface
+      set_fact:
+        internal_net_interface: "{{ hostvars[inventory_hostname]['ansible_'+item]['device'] }}"
+        internal_net_mac: "{{ hostvars[inventory_hostname]['ansible_'+item]['macaddress'] }}"
+      when:
+        - hostvars[inventory_hostname]['ansible_'+item].ipv4 is not defined
+      with_items: "{{ ansible_interfaces }}"
+
+    - name: Fail when all interfaces have an ip address
+      fail:
+        msg: "All interfaces are currently assigned an ip address. You need one that is not configured for the internal network. Try deleting the connection in NM and reload the connections."
+      when: internal_net_interface is not defined
+
+    - name: Gather facts about External network interface
+      set_fact:
+        external_net_interface: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['interface'] }}"
+        external_net_mac: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['macaddress'] }}"
+
+    - name: Update packages
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install dnsmasq
+      yum:
+        name: dnsmasq
+        state: latest
+
+    - name: Install configuration file for dnsmasq
+      template:
+        src: dnsmasq.conf
+        dest: /etc/dnsmasq.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable and start dnsmasq service
+      systemd:
+        name: dnsmasq
+        enabled: true
+        state: started
+
+    - name: Insert line in hosts file
+      lineinfile:
+        path: /etc/hosts
+        line: "10.0.0.1\t{{ ansible_hostname }}"
+
+    - name: Insert line in sysctl.d to enable ipv4 forwarding
+      lineinfile:
+        path: /etc/sysctl.d/ip4fw.conf
+        line: "net.ipv4.ip_forward=1"
+
+    - name: Configure NetworkManager connections
+      block:
+        - name: Check about internal interface
+          debug:
+            msg: "Internal {{ internal_net_interface }} mac {{ internal_net_mac }}"
+
+        - name: Check about external interface
+          debug:
+            msg: "External {{ external_net_interface }} mac {{ external_net_mac }}"
+
+        - name: Check hostname
+          debug:
+            msg: "{{ ansible_hostname }}"
+
+        - name: delete any old connections so we can start over
+          file:
+            state: absent
+            path: /etc/NetworkManager/system-connections
+        
+        - name: Install internal net template configuration file for NetworkManager
+          template:
+            src: internal.nmconnection
+            dest: /etc/NetworkManager/system-connections/internal.nmconnection
+            owner: root
+            group: root
+            mode: '0600'
+        
+        - name: Install external net template configuration file for NetworkManager
+          template:
+            src: external.nmconnection
+            dest: /etc/NetworkManager/system-connections/external.nmconnection
+            owner: root
+            group: root
+            mode: '0600'
+
+        - name: Reload NetworkManager connections
+          shell: "nmcli con reload"
+      when: netconfig == 'ready'
+  vars:
+    firewall:
+      - name: Set default zone to internal?
+        zone: internal
+        state: enabled
+
+      - name: Adding DNS and DHCP exceptions
+        service: [dns,dhcp]
+        zone: internal
+        state: enabled
+        permanent: true
+
+      - name: Enable IP masquerading on internal
+        masquerade: yes
+        zone: internal
+        state: enabled
+  roles:
+    - rhel-system-roles.firewall

@@ -1,0 +1,16 @@
+[connection]
+id=External
+uuid=2b9cbfdf-a855-4821-90ae-2d1bf10436c4
+type=ethernet
+autoconnect-priority=-999
+interface-name={{ external_net_interface }}
+
+[ethernet]
+mac-address={{ external_net_mac }}
+
+[ipv4]
+method=auto
+
+[ipv6]
+addr-gen-mode=stable-privacy
+method=auto
