@@ -1,5 +1,5 @@
 ---
-# Welcome to the land of assumptions.
+# Welcome to the land of assumptions. Enjoy your stay (if possible).
 
 - name: rhel-router
   hosts: all
@@ -21,8 +21,11 @@
         msg: "There are {{ ansible_interfaces | length }} interfaces. I support only three."
       when: ansible_interfaces | length != 3
 
-    - name: Delete old Internal nmconnection and wait as to avoid the upcoming fail
+    - name: Delete old Internal nmconnection and wait as to avoid the possible next fail
       shell: "nmcli con del Internal; nmcli con reload; sleep 4"
+      
+    - name: Refresh facts for next part
+      setup:
 
     - name: Gather facts about Internal (unused) network interface
       set_fact:
@@ -129,6 +132,7 @@
       - name: Set default zone to internal?
         zone: internal
         state: enabled
+        permanent: true
 
       - name: Adding DNS and DHCP exceptions
         service: [dns,dhcp]
@@ -140,5 +144,6 @@
         masquerade: yes
         zone: internal
         state: enabled
+        permanent: true
   roles:
     - rhel-system-roles.firewall
