@@ -15,3 +15,5 @@ never-default=true
 [ipv6]
 addr-gen-mode=eui64
 method=ignore
+
+[proxy]
