@@ -21,8 +21,8 @@
         msg: "There are {{ ansible_interfaces | length }} interfaces. I support only three."
       when: ansible_interfaces | length != 3
 
-    - name: Delete old Internal nmconnection to avoid the upcoming fail
-      shell: "nmcli con del Internal; nmcli con reload"
+    - name: Delete old Internal nmconnection and wait as to avoid the upcoming fail
+      shell: "nmcli con del Internal; nmcli con reload; sleep 4"
 
     - name: Gather facts about Internal (unused) network interface
       set_fact:
@@ -41,6 +41,51 @@
       set_fact:
         external_net_interface: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['interface'] }}"
         external_net_mac: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['macaddress'] }}"
+
+    - name: Configure NetworkManager connections
+      block:
+        - name: Check about internal interface
+          debug:
+            msg: "Internal {{ internal_net_interface }} mac {{ internal_net_mac }}"
+
+        - name: Check about external interface
+          debug:
+            msg: "External {{ external_net_interface }} mac {{ external_net_mac }}"
+
+        - name: Check hostname
+          debug:
+            msg: "{{ ansible_hostname }}"
+
+        - name: Delete any old connections so we can start over
+          file:
+            state: absent
+            path: /etc/NetworkManager/system-connections
+         
+        - name: Recreate the directory
+          file:
+            state: directory
+            path: /etc/NetworkManager/system-connections
+            mode: '0600'
+        
+        - name: Install internal net template configuration file for NetworkManager
+          template:
+            src: internal.nmconnection
+            dest: /etc/NetworkManager/system-connections/internal.nmconnection
+            owner: root
+            group: root
+            mode: '0600'
+        
+        - name: Install external net template configuration file for NetworkManager
+          template:
+            src: external.nmconnection
+            dest: /etc/NetworkManager/system-connections/external.nmconnection
+            owner: root
+            group: root
+            mode: '0600'
+
+        - name: Reload NetworkManager connections
+          shell: "nmcli con reload"
+      when: netconfig == 'ready'
 
     - name: Update packages
       yum:
@@ -75,45 +120,10 @@
       lineinfile:
         path: /etc/sysctl.d/ip4fw.conf
         line: "net.ipv4.ip_forward=1"
-
-    - name: Configure NetworkManager connections
-      block:
-        - name: Check about internal interface
-          debug:
-            msg: "Internal {{ internal_net_interface }} mac {{ internal_net_mac }}"
-
-        - name: Check about external interface
-          debug:
-            msg: "External {{ external_net_interface }} mac {{ external_net_mac }}"
-
-        - name: Check hostname
-          debug:
-            msg: "{{ ansible_hostname }}"
-
-        - name: Delete any old connections so we can start over
-          file:
-            state: absent
-            path: /etc/NetworkManager/system-connections
         
-        - name: Install internal net template configuration file for NetworkManager
-          template:
-            src: internal.nmconnection
-            dest: /etc/NetworkManager/system-connections/internal.nmconnection
-            owner: root
-            group: root
-            mode: '0600'
+    - name: Load new sysctl settings
+      shell: "sysctl -p /etc/sysctl.d/ip4fw.conf"
         
-        - name: Install external net template configuration file for NetworkManager
-          template:
-            src: external.nmconnection
-            dest: /etc/NetworkManager/system-connections/external.nmconnection
-            owner: root
-            group: root
-            mode: '0600'
-
-        - name: Reload NetworkManager connections
-          shell: "nmcli con reload"
-      when: netconfig == 'ready'
   vars:
     firewall:
       - name: Set default zone to internal?
