@@ -19,7 +19,10 @@
     - name: Check to make sure there are only three network interfaces (including lo) or fail
       fail:
         msg: "There are {{ ansible_interfaces | length }} interfaces. I support only three."
-      when: ansible_interfaces | length != 4
+      when: ansible_interfaces | length != 3
+
+    - name: Delete old Internal nmconnection to avoid the upcoming fail
+      shell: "nmcli con del Internal; nmcli con reload"
 
     - name: Gather facts about Internal (unused) network interface
       set_fact:
@@ -28,7 +31,7 @@
       when:
         - hostvars[inventory_hostname]['ansible_'+item].ipv4 is not defined
       with_items: "{{ ansible_interfaces }}"
-
+      
     - name: Fail when all interfaces have an ip address
       fail:
         msg: "All interfaces are currently assigned an ip address. You need one that is not configured for the internal network. Try deleting the connection in NM and reload the connections."
@@ -87,7 +90,7 @@
           debug:
             msg: "{{ ansible_hostname }}"
 
-        - name: delete any old connections so we can start over
+        - name: Delete any old connections so we can start over
           file:
             state: absent
             path: /etc/NetworkManager/system-connections
