@@ -1,6 +1,4 @@
 ---
-# Welcome to the land of assumptions. Enjoy your stay (if possible).
-
 - name: rhel-router
   hosts: all
   become: yes
