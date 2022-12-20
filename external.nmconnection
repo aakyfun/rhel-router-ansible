@@ -9,6 +9,7 @@ interface-name={{ external_net_interface }}
 mac-address={{ external_net_mac }}
 
 [ipv4]
+dns={{ router_static_ip }};
 method=auto
 
 [ipv6]
