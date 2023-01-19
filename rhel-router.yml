@@ -125,16 +125,12 @@
     - name: Load new sysctl settings
       shell: "sysctl -p /etc/sysctl.d/ip4fw.conf"
       
-    - name: Set default firewalld zone to internal
-      shell: "firewall-cmd --set-default-zone internal; firewall-cmd --reload"
+    #- name: Set default firewalld zone to internal
+    #  shell: "firewall-cmd --set-default-zone internal; firewall-cmd --reload"
         
   vars:
+    firewall_default_zone: internal
     firewall:
-      #- name: Set default zone to internal? HOW DO I DO THIS?
-      #  zone: internal
-      #  state: enabled
-      #  permanent: true
-
       - name: Adding DNS and DHCP exceptions
         service: [dns,dhcp]
         zone: internal
