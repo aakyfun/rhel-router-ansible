@@ -1,3 +1,5 @@
+<b>Heads up: This project will be replaced by aakyfun/lab-network</b>
+
 # rhel-router-ansible
 Simple playbook to provision an IPv4 NAT router with DNS and DHCP on RHEL. Intended for virtual machine labs.  
 This is one of my first Ansible playbooks so be warned :)
