@@ -1,4 +1,4 @@
-<b>Heads up: This project is not gonna be maintained.</b>
+<b>Heads up: I am not working on this anymore. There is almost a replacement but it won't be ansible-based for various reasons.</b>
 
 # rhel-router-ansible
 Simple playbook to provision an IPv4 NAT router with DNS and DHCP on RHEL. Intended for virtual machine labs.  
